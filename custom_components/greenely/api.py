@@ -66,6 +66,22 @@ class GreenelyApi:
             _LOGGER.error('Failed to fetch usage data, %s', response.text)
             return data
         
+    def get_produced(self, startDate, endDate, showHourly):
+        start = "?from=" + str(startDate.year) + "-" + startDate.strftime("%m") + '-' + startDate.strftime("%d")
+        end = "&to=" + str(endDate.year) + "-" + endDate.strftime("%m") + '-' + endDate.strftime("%d")
+        resolution = "hourly" if showHourly else "daily"
+        url = self._url_facilities_base + self._facility_id + '/produced-electricity' + start + end + "&resolution=" + resolution
+        _LOGGER.debug('Fetching produced from url, %s', url)
+        response = requests.get(url, headers = self._headers)
+        data = {}
+        if response.status_code == requests.codes.ok:
+            data = response.json()
+            _LOGGER.debug('Fetched data for produced endpoint, %s', data['data'])
+            return data['data']
+        else:
+            _LOGGER.error('Failed to fetch produced data, %s', response.text)
+            return data
+        
     def get_facility_id(self):
         result = requests.get(self._url_facilities_base, headers = self._headers)
         if result.status_code == requests.codes.ok:

@@ -2,6 +2,7 @@
 
 SENSOR_DAILY_USAGE_NAME = 'Greenely Daily Usage'
 SENSOR_HOURLY_USAGE_NAME = 'Greenely Hourly Usage'
+SENSOR_DAILY_PRODUCED_NAME = 'Greenely Daily Produced'
 SENSOR_SOLD_NAME = 'Greenely Sold'
 SENSOR_PRICES_NAME = 'Greenely Prices'
 
@@ -10,6 +11,7 @@ DOMAIN = 'greenely'
 CONF_PRICES = 'prices'
 CONF_DAILY_USAGE = 'daily_usage'
 CONF_HOURLY_USAGE = 'hourly_usage'
+CONF_DAILY_PRODUCED = 'daily_produced'
 CONF_SOLD = 'sold'
 CONF_SOLD_MEASURE = 'sold_measure'
 CONF_SOLD_DAILY = 'sold_daily'

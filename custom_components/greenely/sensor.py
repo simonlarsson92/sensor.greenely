@@ -12,9 +12,9 @@ from homeassistant.helpers.entity import Entity
 
 from .api import GreenelyApi
 
-from .const import (DOMAIN, SENSOR_DAILY_USAGE_NAME, SENSOR_HOURLY_USAGE_NAME,
+from .const import (DOMAIN, SENSOR_DAILY_USAGE_NAME, SENSOR_HOURLY_USAGE_NAME, SENSOR_DAILY_PRODUCED_NAME,
                     SENSOR_SOLD_NAME, SENSOR_PRICES_NAME, CONF_HOURLY_USAGE,
-                    CONF_DAILY_USAGE, CONF_SOLD, CONF_PRICES, CONF_DATE_FORMAT,
+                    CONF_DAILY_USAGE, CONF_DAILY_PRODUCED, CONF_SOLD, CONF_PRICES, CONF_DATE_FORMAT,
                     CONF_TIME_FORMAT, CONF_USAGE_DAYS, CONF_SOLD_MEASURE,
                     CONF_SOLD_DAILY, CONF_HOURLY_OFFSET_DAYS, CONF_FACILITY_ID, CONF_HOMEKIT_COMPATIBLE)
 
@@ -40,6 +40,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_DAILY_USAGE, default=True):
     cv.boolean,
     vol.Optional(CONF_HOURLY_USAGE, default=False):
+    cv.boolean,
+    vol.Optional(CONF_DAILY_PRODUCED, default=False):
     cv.boolean,
     vol.Optional(CONF_SOLD, default=False):
     cv.boolean,
@@ -77,6 +79,7 @@ async def async_setup_platform(hass,
     time_format = config.get(CONF_TIME_FORMAT)
     show_daily_usage = config.get(CONF_DAILY_USAGE)
     show_hourly_usage = config.get(CONF_HOURLY_USAGE)
+    show_daily_produced = config.get(CONF_DAILY_PRODUCED)
     show_sold = config.get(CONF_SOLD)
     show_prices = config.get(CONF_PRICES)
     usage_days = config.get(CONF_USAGE_DAYS)
@@ -100,6 +103,10 @@ async def async_setup_platform(hass,
             GreenelyHourlyUsageSensor(SENSOR_HOURLY_USAGE_NAME, api,
                                       hourly_offset_days, date_format,
                                       time_format))
+    if show_daily_produced:    
+        sensors.append(
+            GreenelyDailyProducedSensor(SENSOR_DAILY_PRODUCED_NAME, api, usage_days,
+                                        date_format, time_format))
     if show_sold:
         sensors.append(
             GreenelySoldSensor(SENSOR_SOLD_NAME, api, sold_measure, sold_daily,
@@ -467,3 +474,83 @@ class GreenelySoldSensor(Entity):
                 months.append(data)
         self._state = str(total_sold / 1000) if total_sold != 0 else 0
         self._state_attributes['sold_data'] = months
+
+
+class GreenelyDailyProducedSensor(Entity):
+
+    def __init__(self, name, api, usage_days, date_format, time_format):
+        self._name = name
+        self._icon = "mdi:power-socket-eu"
+        self._state = 0
+        self._state_attributes = {'state_class':'measurement','last_reset':'1970-01-01T00:00:00+00:00'}
+        self._unit_of_measurement = 'kWh'
+        self._usage_days = usage_days
+        self._date_format = date_format
+        self._time_format = time_format
+        self._api = api
+        self._device_class = 'energy'
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._name
+
+    @property
+    def icon(self):
+        """Icon to use in the frontend, if any."""
+        return self._icon
+
+    @property
+    def state(self):
+        """Return the state of the device."""
+        return self._state
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of the sensor."""
+        return self._state_attributes
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return self._unit_of_measurement
+
+    @property
+    def device_class(self):
+        """Return the class of the sensor."""
+        return self._device_class
+
+    def update(self):
+        _LOGGER.debug('Checking jwt validity...')
+        if self._api.check_auth():
+            # Get todays date
+            today = datetime.now().replace(hour=0,
+                                           minute=0,
+                                           second=0,
+                                           microsecond=0)
+            _LOGGER.debug('Fetching daily produced data...')
+            data = []
+            startDate = today - timedelta(days=self._usage_days)
+            endDate = today + timedelta(days=1)
+            response = self._api.get_produced(startDate, endDate, False)
+            if response:
+                data = self.make_attributes(today, response)
+            self._state_attributes['data'] = data
+        else:
+            _LOGGER.error('Unable to log in!')
+
+    def make_attributes(self, today, response):
+        data = []
+        keys = iter(response)
+        if keys != None:
+            for k in keys:
+                daily_data = {}
+                dateTime = datetime.strptime(response[k]['localtime'],
+                                             '%Y-%m-%d %H:%M')
+                daily_data['localtime'] = dateTime.strftime(self._date_format)
+                produced = response[k]['value']
+                if (dateTime == today):
+                    self._state = produced / 1000 if produced != None else 0
+                daily_data['produced'] = (produced / 1000) if produced != None else 0
+                data.append(daily_data)
+        return data
