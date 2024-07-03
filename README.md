@@ -41,8 +41,10 @@ sensor:
     facility_id: '77081'
     daily_usage: true
     hourly_usage: true
+    daily_production: true
     hourly_offset_days: 2
     usage_days: 4
+    production_days: 4
     prices: false
     sold: true
     sold_daily: true
@@ -61,10 +63,12 @@ key | type | description
 **facility_id (Optional)** | string | If you have more than one facility and know the facility ID you want data from, put it here.  Note: The facility id's can be found eg. by installing Android Studio and in a Play Store enabled device emulator (indicated by the Play Icon) install the Greenely app. Run app, login with your Greenely credentials, and use Logcat in Android Studio, filtered on Greenely to find the facility ID. In the app, switch between the registered facilities to find out the different facility IDs. Or, if you use Postman, import [this](https://www.dropbox.com/s/jmoo24tikbre4ep/greenely%20test.postman_collection.json?dl=0) and send login and then facilities.   Default `primary`.
 **daily_usage (Optional)** | boolean | Creates a sensor showing daily usage data. The state of this sensor is yesterday's total usage. Default `true`.
 **hourly_usage (Optional)** | boolean | Creates a sensor showing yesterday's hourly usage data. Default `false`.
+**daily_production (Optional)** | boolean | Creates a sensor showing daily production data. The state of this sensor is todays's total production. Default `false`.
 **sold (Optional)** | boolean | Creates a sensor showing sold electricity data. The state of this sensor is the total value. Default `false`.
 **prices (Optional)** | boolean | Creates a sensor showing price data in kr/kWh. Default `true`.
 **hourly_offset_days (Optional)** | number | How many days ago you want the hourly data from. Default `1` (yesterday's data).
 **usage_days (Optional)** | number | How many days of usage data you want. Default `10`.
+**production_days (Optional)** | number | How many days of production data you want. Default `10`.
 **sold_measure (Optional)** | number | How many months or days of sold data you want to see. Default `2`.
 **sold_daily (Optional)** | boolean | Show daily sold data instead of monthly. Default `false`.
 **date_format (Optional)** | string | Default `%b %d %Y`, shows up as `Jan 18 2020`. [References](https://strftime.org/)
@@ -201,7 +205,7 @@ date_format: '%Y-%m-%d'
 You can then for example make a script to trigger it through voice commands to Google Assistant!
 
 ## Debug logging
-Add this to your configuration.yaml to debug the component
+Add this to your configuration.yaml under logger to debug the component
 ```logger:
   default: warning
   logs:

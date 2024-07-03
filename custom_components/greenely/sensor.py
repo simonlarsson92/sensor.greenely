@@ -12,10 +12,10 @@ from homeassistant.helpers.entity import Entity
 
 from .api import GreenelyApi
 
-from .const import (DOMAIN, SENSOR_DAILY_USAGE_NAME, SENSOR_HOURLY_USAGE_NAME, SENSOR_DAILY_PRODUCED_NAME,
+from .const import (DOMAIN, SENSOR_DAILY_USAGE_NAME, SENSOR_HOURLY_USAGE_NAME, SENSOR_DAILY_PRODUCTION_NAME,
                     SENSOR_SOLD_NAME, SENSOR_PRICES_NAME, CONF_HOURLY_USAGE,
-                    CONF_DAILY_USAGE, CONF_DAILY_PRODUCED, CONF_SOLD, CONF_PRICES, CONF_DATE_FORMAT,
-                    CONF_TIME_FORMAT, CONF_USAGE_DAYS, CONF_SOLD_MEASURE,
+                    CONF_DAILY_USAGE, CONF_DAILY_PRODUCTION, CONF_SOLD, CONF_PRICES, CONF_DATE_FORMAT,
+                    CONF_TIME_FORMAT, CONF_USAGE_DAYS, CONF_PRODUCTION_DAYS, CONF_SOLD_MEASURE,
                     CONF_SOLD_DAILY, CONF_HOURLY_OFFSET_DAYS, CONF_FACILITY_ID, CONF_HOMEKIT_COMPATIBLE)
 
 NAME = DOMAIN
@@ -41,13 +41,15 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     cv.boolean,
     vol.Optional(CONF_HOURLY_USAGE, default=False):
     cv.boolean,
-    vol.Optional(CONF_DAILY_PRODUCED, default=False):
+    vol.Optional(CONF_DAILY_PRODUCTION, default=False):
     cv.boolean,
     vol.Optional(CONF_SOLD, default=False):
     cv.boolean,
     vol.Optional(CONF_PRICES, default=True):
     cv.boolean,
     vol.Optional(CONF_USAGE_DAYS, default=10):
+    cv.positive_int,
+    vol.Optional(CONF_PRODUCTION_DAYS, default=10):
     cv.positive_int,
     vol.Optional(CONF_SOLD_MEASURE, default=2):
     cv.positive_int,
@@ -79,10 +81,11 @@ async def async_setup_platform(hass,
     time_format = config.get(CONF_TIME_FORMAT)
     show_daily_usage = config.get(CONF_DAILY_USAGE)
     show_hourly_usage = config.get(CONF_HOURLY_USAGE)
-    show_daily_produced = config.get(CONF_DAILY_PRODUCED)
+    show_daily_production = config.get(CONF_DAILY_PRODUCTION)
     show_sold = config.get(CONF_SOLD)
     show_prices = config.get(CONF_PRICES)
     usage_days = config.get(CONF_USAGE_DAYS)
+    production_days = config.get(CONF_PRODUCTION_DAYS)
     sold_measure = config.get(CONF_SOLD_MEASURE)
     sold_daily = config.get(CONF_SOLD_DAILY)
     hourly_offset_days = config.get(CONF_HOURLY_OFFSET_DAYS)
@@ -103,9 +106,9 @@ async def async_setup_platform(hass,
             GreenelyHourlyUsageSensor(SENSOR_HOURLY_USAGE_NAME, api,
                                       hourly_offset_days, date_format,
                                       time_format))
-    if show_daily_produced:    
+    if show_daily_production:    
         sensors.append(
-            GreenelyDailyProducedSensor(SENSOR_DAILY_PRODUCED_NAME, api, usage_days,
+            GreenelyDailyProductionSensor(SENSOR_DAILY_PRODUCTION_NAME, api, production_days,
                                         date_format, time_format))
     if show_sold:
         sensors.append(
@@ -476,15 +479,15 @@ class GreenelySoldSensor(Entity):
         self._state_attributes['sold_data'] = months
 
 
-class GreenelyDailyProducedSensor(Entity):
+class GreenelyDailyProductionSensor(Entity):
 
-    def __init__(self, name, api, usage_days, date_format, time_format):
+    def __init__(self, name, api, production_days, date_format, time_format):
         self._name = name
         self._icon = "mdi:power-socket-eu"
         self._state = 0
         self._state_attributes = {'state_class':'measurement','last_reset':'1970-01-01T00:00:00+00:00'}
         self._unit_of_measurement = 'kWh'
-        self._usage_days = usage_days
+        self._production_days = production_days
         self._date_format = date_format
         self._time_format = time_format
         self._api = api
@@ -528,11 +531,11 @@ class GreenelyDailyProducedSensor(Entity):
                                            minute=0,
                                            second=0,
                                            microsecond=0)
-            _LOGGER.debug('Fetching daily produced data...')
+            _LOGGER.debug('Fetching daily production data...')
             data = []
-            startDate = today - timedelta(days=self._usage_days)
+            startDate = today - timedelta(days=self._production_days)
             endDate = today + timedelta(days=1)
-            response = self._api.get_produced(startDate, endDate, False)
+            response = self._api.get_produced_electricity(startDate, endDate, False)
             if response:
                 data = self.make_attributes(today, response)
             self._state_attributes['data'] = data
@@ -548,9 +551,9 @@ class GreenelyDailyProducedSensor(Entity):
                 dateTime = datetime.strptime(response[k]['localtime'],
                                              '%Y-%m-%d %H:%M')
                 daily_data['localtime'] = dateTime.strftime(self._date_format)
-                produced = response[k]['value']
+                production = response[k]['value']
                 if (dateTime == today):
-                    self._state = produced / 1000 if produced != None else 0
-                daily_data['produced'] = (produced / 1000) if produced != None else 0
+                    self._state = production / 1000 if production != None else 0
+                daily_data['production'] = (production / 1000) if production != None else 0
                 data.append(daily_data)
         return data
