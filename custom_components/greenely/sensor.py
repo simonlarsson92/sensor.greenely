@@ -533,7 +533,7 @@ class GreenelyDailyProductionSensor(Entity):
                                            microsecond=0)
             _LOGGER.debug('Fetching daily production data...')
             data = []
-            startDate = today - timedelta(days=self._production_days)
+            startDate = today - timedelta(days=(self._production_days - 1))
             endDate = today + timedelta(days=1)
             response = self._api.get_produced_electricity(startDate, endDate, False)
             if response:
