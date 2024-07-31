@@ -25,6 +25,8 @@ from .const import (
     SENSOR_DAILY_USAGE_NAME,
     SENSOR_HOURLY_USAGE_NAME,
     SENSOR_PRICES_NAME,
+    GREENELY_DAILY_SOLD_ELECTRICITY,
+    SENSOR_DAILY_SOLD_ELECTRICITY_NAME,
 )
 
 SCAN_INTERVAL = timedelta(minutes=10)
@@ -90,6 +92,18 @@ async def async_setup_entry(
         sensors.append(
             GreenelyDailyProducedElecticitySensor(
                 SENSOR_DAILY_PRODUCED_ELECTRICITY_NAME,
+                api,
+                facility_id,
+                production_days,
+                date_format,
+                time_format,
+            )
+        )
+    
+    if config_entry.options.get(GREENELY_DAILY_SOLD_ELECTRICITY, False):
+        sensors.append(
+            GreenelyDailySoldElecticitySensor(
+                SENSOR_DAILY_SOLD_ELECTRICITY_NAME,
                 api,
                 facility_id,
                 production_days,
@@ -542,6 +556,109 @@ class GreenelyDailyProducedElecticitySensor(Entity):
                     )
                 daily_data["produced_electricity"] = (
                     (produced_electricity / 1000) if produced_electricity != None else 0
+                )
+                data.append(daily_data)
+        return data
+
+class GreenelyDailySoldElecticitySensor(Entity):
+    def __init__(
+        self,
+        name,
+        api,
+        facility_id,
+        produced_electricity_days,
+        date_format,
+        time_format,
+    ):
+        self._name = name
+        self._icon = "mdi:lightning-bolt"
+        self._state = 0
+        self._state_attributes = {
+            "state_class": "measurement",
+            "last_reset": "1970-01-01T00:00:00+00:00",
+        }
+        self._produced_electricity_days = produced_electricity_days
+        self._unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+        self._date_format = date_format
+        self._time_format = time_format
+        self._api = api
+        self._device_class = SensorDeviceClass.ENERGY
+        self._facility_id = facility_id
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._name
+
+    @property
+    def icon(self):
+        """Icon to use in the frontend, if any."""
+        return self._icon
+
+    @property
+    def state(self):
+        """Return the state of the device."""
+        return self._state
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of the sensor."""
+        return self._state_attributes
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return self._unit_of_measurement
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return self._facility_id + "_daily_sold_electricity"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        _LOGGER.debug("device_info")
+        return DeviceInfo(
+            name="Greenely",
+            identifiers={(DOMAIN, self._facility_id)},
+            manufacturer="Greenely",
+            entry_type="service",
+        )
+
+    def update(self):
+        _LOGGER.debug("Checking jwt validity...")
+        if self._api.check_auth():
+            # Get todays date
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            _LOGGER.debug("Fetching daily sold electricity data...")
+            data = []
+            startDate = today - timedelta(days=(self._produced_electricity_days))
+            endDate = today - timedelta(days=1)
+            response = self._api.get_sold_electricity(startDate, endDate, False)
+            if response:
+                data = self.make_attributes(today, response)
+            self._state_attributes["data"] = data
+        else:
+            _LOGGER.error("Unable to log in!")
+
+    def make_attributes(self, today, response):
+        data = []
+        keys = iter(response)
+        if keys != None:
+            for k in keys:
+                daily_data = {}
+                dateTime = datetime.strptime(response[k]["localtime"], "%Y-%m-%d %H:%M")
+                daily_data["localtime"] = dateTime.strftime(self._date_format)
+                sold_electricity = response[k]["usage"]
+                if dateTime == today:
+                    self._state = (
+                        sold_electricity / 1000
+                        if sold_electricity != None
+                        else 0
+                    )
+                daily_data["sold_electricity"] = (
+                    (sold_electricity / 1000) if sold_electricity != None else 0
                 )
                 data.append(daily_data)
         return data

@@ -24,7 +24,8 @@
         "step": {
             "init": {
                 "data": {
-                    "daily_produced_electricity": "Daglig producerad el sensor",
+                    "daily_produced_electricity": "Dagligt producerad el sensor",
+                    "daily_sold_electricity": "Dagligt såld el sensor",
                     "daily_usage": "Daglig förbrukning sensor",
                     "date_format": "Datumformat",
                     "facility_id": "Anläggnings-ID",

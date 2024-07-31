@@ -32,6 +32,7 @@ from .const import (
     GREENELY_PRODUCED_ELECTRICITY_DAYS,
     GREENELY_TIME_FORMAT,
     GREENELY_USAGE_DAYS,
+    GREENELY_DAILY_SOLD_ELECTRICITY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -160,6 +161,12 @@ class GreenelyOptionsFlow(OptionsFlow):
                     GREENELY_DAILY_PRODUCED_ELECTRICITY,
                     default=self.config_entry.options.get(
                         GREENELY_DAILY_PRODUCED_ELECTRICITY, False
+                    ),
+                ): bool,
+                vol.Optional(
+                    GREENELY_DAILY_SOLD_ELECTRICITY,
+                    default=self.config_entry.options.get(
+                        GREENELY_DAILY_SOLD_ELECTRICITY, False
                     ),
                 ): bool,
                 vol.Optional(

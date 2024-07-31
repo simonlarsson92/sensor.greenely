@@ -29,6 +29,7 @@
           "daily_usage": "Daily usage sensor",
           "hourly_usage": "Hourly usage sensor",
           "daily_produced_electricity": "Daily produced electricity sensor",
+          "daily_sold_electricity": "Daily sold electricity sensor",
           "usage_days": "Usage days",
           "produced_electricity_days": "Produced electricity days",
           "date_format": "Date format",
