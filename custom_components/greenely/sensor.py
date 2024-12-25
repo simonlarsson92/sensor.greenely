@@ -4,7 +4,7 @@ import logging
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
 from homeassistant.helpers.entity import Entity
 
 from . import GreenelyData
@@ -170,7 +170,7 @@ class GreenelyDailyUsageSensor(Entity):
             name="Greenely",
             identifiers={(DOMAIN, self._facility_id)},
             manufacturer="Greenely",
-            entry_type="service",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property
@@ -267,7 +267,7 @@ class GreenelyHourlyUsageSensor(Entity):
             name="Greenely",
             identifiers={(DOMAIN, self._facility_id)},
             manufacturer="Greenely",
-            entry_type="service",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property
@@ -369,7 +369,7 @@ class GreenelyPricesSensor(Entity):
             name="Greenely",
             identifiers={(DOMAIN, self._facility_id)},
             manufacturer="Greenely",
-            entry_type="service",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     def update(self):
@@ -520,7 +520,7 @@ class GreenelyDailyProducedElecticitySensor(Entity):
             name="Greenely",
             identifiers={(DOMAIN, self._facility_id)},
             manufacturer="Greenely",
-            entry_type="service",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     def update(self):
