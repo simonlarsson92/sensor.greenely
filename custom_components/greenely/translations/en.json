@@ -25,6 +25,7 @@
             "init": {
                 "data": {
                     "daily_produced_electricity": "Daily produced electricity sensor",
+                    "daily_sold_electricity": "Daily sold electricity sensor",
                     "daily_usage": "Daily usage sensor",
                     "date_format": "Date format",
                     "facility_id": "Facility ID",
@@ -34,7 +35,9 @@
                     "prices": "Price sensor",
                     "produced_electricity_days": "Produced electricity days",
                     "time_format": "Time format",
-                    "usage_days": "Usage days"
+                    "usage_days": "Usage days",
+                    "sell_price": "Sell prices sensor",
+                    "sell_price_offset": "Sell price offset in selected currency"
                 },
                 "title": "Manage Sensors"
             }

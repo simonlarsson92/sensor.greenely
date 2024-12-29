@@ -6,13 +6,7 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -32,6 +26,9 @@ from .const import (
     GREENELY_PRODUCED_ELECTRICITY_DAYS,
     GREENELY_TIME_FORMAT,
     GREENELY_USAGE_DAYS,
+    GREENELY_DAILY_SOLD_ELECTRICITY,
+    GREENELY_SELL_PRICE,
+    GREENELY_SELL_PRICE_OFFSET,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -81,7 +78,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     }
 
 
-class ConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Greenely."""
 
     VERSION = 1
@@ -89,14 +86,14 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigFlow,
+        config_entry: config_entries.ConfigEntry,
     ) -> GreenelyOptionsFlow:
         """Create the options flow."""
         return GreenelyOptionsFlow(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -123,16 +120,16 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class GreenelyOptionsFlow(OptionsFlow):
+class GreenelyOptionsFlow(config_entries.OptionsFlow):
     """Handle a option flow for Greenely."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry):
         """Initialize Greenely options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Manage the Greenely options."""
         if user_input is not None:
             return self.async_create_entry(title="Manage Sensors", data=user_input)
@@ -146,57 +143,75 @@ class GreenelyOptionsFlow(OptionsFlow):
             {
                 vol.Optional(
                     GREENELY_PRICES,
-                    default=self.config_entry.options.get(GREENELY_PRICES, True),
+                    default=self._config_entry.options.get(GREENELY_PRICES, True),
                 ): bool,
                 vol.Optional(
                     GREENELY_DAILY_USAGE,
-                    default=self.config_entry.options.get(GREENELY_DAILY_USAGE, True),
+                    default=self._config_entry.options.get(GREENELY_DAILY_USAGE, True),
                 ): bool,
                 vol.Optional(
                     GREENELY_HOURLY_USAGE,
-                    default=self.config_entry.options.get(GREENELY_HOURLY_USAGE, False),
+                    default=self._config_entry.options.get(GREENELY_HOURLY_USAGE, False),
                 ): bool,
                 vol.Optional(
                     GREENELY_DAILY_PRODUCED_ELECTRICITY,
-                    default=self.config_entry.options.get(
+                    default=self._config_entry.options.get(
                         GREENELY_DAILY_PRODUCED_ELECTRICITY, False
                     ),
                 ): bool,
                 vol.Optional(
+                    GREENELY_DAILY_SOLD_ELECTRICITY,
+                    default=self._config_entry.options.get(
+                        GREENELY_DAILY_SOLD_ELECTRICITY, False
+                    ),
+                ): bool,
+                vol.Optional(
+                    GREENELY_SELL_PRICE,
+                    default=self._config_entry.options.get(
+                        GREENELY_SELL_PRICE, False
+                    ),
+                ): bool,
+                vol.Optional(
+                    GREENELY_SELL_PRICE_OFFSET,
+                    default=self._config_entry.options.get(
+                        GREENELY_SELL_PRICE_OFFSET, 0
+                    ),
+                ): int,
+                vol.Optional(
                     GREENELY_USAGE_DAYS,
-                    default=self.config_entry.options.get(GREENELY_USAGE_DAYS, 10),
+                    default=self._config_entry.options.get(GREENELY_USAGE_DAYS, 10),
                 ): int,
                 vol.Optional(
                     GREENELY_PRODUCED_ELECTRICITY_DAYS,
-                    default=self.config_entry.options.get(
+                    default=self._config_entry.options.get(
                         GREENELY_PRODUCED_ELECTRICITY_DAYS, 10
                     ),
                 ): int,
                 vol.Optional(
                     GREENELY_DATE_FORMAT,
-                    default=self.config_entry.options.get(
+                    default=self._config_entry.options.get(
                         GREENELY_DATE_FORMAT, "%b %d %Y"
                     ),
                 ): str,
                 vol.Optional(
                     GREENELY_TIME_FORMAT,
-                    default=self.config_entry.options.get(
+                    default=self._config_entry.options.get(
                         GREENELY_TIME_FORMAT, "%H:%M"
                     ),
                 ): str,
                 vol.Optional(
                     GREENELY_HOURLY_OFFSET_DAYS,
-                    default=self.config_entry.options.get(
+                    default=self._config_entry.options.get(
                         GREENELY_HOURLY_OFFSET_DAYS, 1
                     ),
                 ): int,
                 vol.Optional(
                     GREENELY_FACILITY_ID,
-                    default=self.config_entry.options.get(GREENELY_FACILITY_ID),
+                    default=self._config_entry.options.get(GREENELY_FACILITY_ID),
                 ): int,
                 vol.Optional(
                     GREENELY_HOMEKIT_COMPATIBLE,
-                    default=self.config_entry.options.get(
+                    default=self._config_entry.options.get(
                         GREENELY_HOMEKIT_COMPATIBLE, False
                     ),
                 ): bool,

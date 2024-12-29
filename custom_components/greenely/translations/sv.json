@@ -24,7 +24,8 @@
         "step": {
             "init": {
                 "data": {
-                    "daily_produced_electricity": "Daglig producerad el sensor",
+                    "daily_produced_electricity": "Dagligt producerad el sensor",
+                    "daily_sold_electricity": "Dagligt såld el sensor",
                     "daily_usage": "Daglig förbrukning sensor",
                     "date_format": "Datumformat",
                     "facility_id": "Anläggnings-ID",
@@ -34,7 +35,9 @@
                     "prices": "Prissensor",
                     "produced_electricity_days": "Producerad el dagar",
                     "time_format": "Tidsformat",
-                    "usage_days": "Förbrukningsdagar"
+                    "usage_days": "Förbrukningsdagar",
+                    "sell_price": "Försäljningsprissensor",
+                    "sell_price_offset": "Försäljningspris justering i vald valuta"
                 },
                 "title": "Hantera sensorer"
             }

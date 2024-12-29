@@ -190,6 +190,48 @@ class GreenelyApi:
                 "Failed to fetch produced electricity data, %s", response.text
             )
             return data
+        
+    def get_sold_electricity(self, startDate, endDate, showHourly):
+        start = (
+            "?from="
+            + str(startDate.year)
+            + "-"
+            + startDate.strftime("%m")
+            + "-"
+            + startDate.strftime("%d")
+        )
+        end = (
+            "&to="
+            + str(endDate.year)
+            + "-"
+            + endDate.strftime("%m")
+            + "-"
+            + endDate.strftime("%d")
+        )
+        resolution = "hourly" if showHourly else "daily"
+        url = (
+            self._url_facilities_base
+            + self._facility_id
+            + "/sold-electricity"
+            + start
+            + end
+            + "&resolution="
+            + resolution
+        )
+        _LOGGER.debug("Fetching sold electicity from url, %s", url)
+        response = httpx.get(url, headers=self._headers)
+        data = {}
+        if response.status_code == httpx.codes.ok:
+            data = response.json()
+            _LOGGER.debug(
+                "Fetched data for sold electricity endpoint, %s", data["data"]
+            )
+            return data["data"]
+        else:
+            _LOGGER.error(
+                "Failed to fetch sold electricity data, %s", response.text
+            )
+            return data
 
     def check_auth(self):
         """Check to see if our jwt is valid."""
