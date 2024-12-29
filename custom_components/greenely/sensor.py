@@ -27,6 +27,9 @@ from .const import (
     SENSOR_PRICES_NAME,
     GREENELY_DAILY_SOLD_ELECTRICITY,
     SENSOR_DAILY_SOLD_ELECTRICITY_NAME,
+    GREENELY_SELL_PRICE,
+    GREENELY_SELL_PRICE_OFFSET,
+    SENSOR_SELL_PRICE_NAME,
 )
 
 SCAN_INTERVAL = timedelta(minutes=10)
@@ -48,6 +51,7 @@ async def async_setup_entry(
     date_format = config_entry.options.get(GREENELY_DATE_FORMAT, "%b %d %Y")
     time_format = config_entry.options.get(GREENELY_TIME_FORMAT, "%H:%M")
     homekit_compatible = config_entry.options.get(GREENELY_HOMEKIT_COMPATIBLE, False)
+    sell_price_offset = config_entry.options.get(GREENELY_SELL_PRICE_OFFSET,0)
 
     sensors = []
 
@@ -109,6 +113,19 @@ async def async_setup_entry(
                 production_days,
                 date_format,
                 time_format,
+            )
+        )
+    
+    if config_entry.options.get(GREENELY_SELL_PRICE, False):
+        sensors.append(
+            GreenelySellPriceSensor(
+                SENSOR_SELL_PRICE_NAME,
+                api,
+                facility_id,
+                sell_price_offset,
+                date_format,
+                time_format,
+                homekit_compatible,
             )
         )
 
@@ -662,3 +679,144 @@ class GreenelyDailySoldElecticitySensor(Entity):
                 )
                 data.append(daily_data)
         return data
+    
+class GreenelySellPriceSensor(Entity):
+    def __init__(
+        self, name, api, facility_id, sell_price_offset, date_format, time_format, homekit_compatible
+    ):
+        self._name = name
+        self._icon = "mdi:account-cash"
+        self._state = 0
+        self._state_attributes = {}
+        self._unit_of_measurement = "SEK/kWh" if homekit_compatible != True else "°C"
+        self._sell_price_offset = sell_price_offset
+        self._date_format = date_format
+        self._time_format = time_format
+        self._homekit_compatible = homekit_compatible
+        self._api = api
+        self._facility_id = facility_id
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._name
+
+    @property
+    def icon(self):
+        """Icon to use in the frontend, if any."""
+        return self._icon
+
+    @property
+    def state(self):
+        """Return the state of the device."""
+        return self._state
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of the sensor."""
+        return self._state_attributes
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return self._unit_of_measurement
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return self._facility_id + "_sell_price"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        _LOGGER.debug("device_info")
+        return DeviceInfo(
+            name="Greenely",
+            identifiers={(DOMAIN, self._facility_id)},
+            manufacturer="Greenely",
+            entry_type=DeviceEntryType.SERVICE,
+        )
+
+    def update(self):
+        """Update state and attributes."""
+        _LOGGER.debug("Checking jwt validity...")
+        if self._api.check_auth():
+            data = self._api.get_price_data()
+            totalCost = 0
+            if data:
+                for d, value in data.items():
+                    cost = value["cost"]
+                    if cost != None:
+                        totalCost += cost
+                self._state_attributes["current_month"] = round(totalCost / 100000)
+            spot_price_data = self._api.get_spot_price()
+            if spot_price_data:
+                _LOGGER.debug("Fetching daily prices...")
+                today = datetime.now().replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+                todaysData = []
+                tomorrowsData = []
+                yesterdaysData = []
+                for d in spot_price_data["data"]:
+                    timestamp = datetime.strptime(
+                        spot_price_data["data"][d]["localtime"], "%Y-%m-%d %H:%M"
+                    )
+                    if timestamp.date() == today.date():
+                        if spot_price_data["data"][d]["price"] != None:
+                            todaysData.append(self.make_attribute(spot_price_data, d))
+                    elif timestamp.date() == (today.date() + timedelta(days=1)):
+                        if spot_price_data["data"][d]["price"] != None:
+                            tomorrowsData.append(
+                                self.make_attribute(spot_price_data, d)
+                            )
+                    elif timestamp.date() == (today.date() - timedelta(days=1)):
+                        if spot_price_data["data"][d]["price"] != None:
+                            yesterdaysData.append(
+                                self.make_attribute(spot_price_data, d)
+                            )
+                self._state_attributes["current_day"] = todaysData
+                self._state_attributes["next_day"] = tomorrowsData
+                self._state_attributes["previous_day"] = yesterdaysData
+        else:
+            _LOGGER.error("Unable to log in!")
+
+    def make_attribute(self, response, value):
+        if response:
+            newPoint = {}
+            today = datetime.now()
+            price = response["data"][value]["price"]
+            dt_object = datetime.strptime(
+                response["data"][value]["localtime"], "%Y-%m-%d %H:%M"
+            )
+            newPoint["date"] = dt_object.strftime(self._date_format)
+            newPoint["time"] = dt_object.strftime(self._time_format)
+            if price != None:
+                rounded = self.format_price(price + self._sell_price_offset)
+                newPoint["price"] = rounded
+                if dt_object.hour == today.hour and dt_object.day == today.day:
+                    self._state = rounded
+            else:
+                newPoint["price"] = 0
+            return newPoint
+
+    def format_price(self, price):
+        if self._homekit_compatible == True:
+            return round(price / 1000)
+        else:
+            return round(((price / 1000) / 100), 4)
+
+    def make_data_attribute(self, name, response, nameOfPriceAttr):
+        if response:
+            points = response.get("points", None)
+            data = []
+            for point in points:
+                price = point[nameOfPriceAttr]
+                if price != None:
+                    newPoint = {}
+                    dt_object = datetime.utcfromtimestamp(point["timestamp"])
+                    newPoint["date"] = dt_object.strftime(self._date_format)
+                    newPoint["time"] = dt_object.strftime(self._time_format)
+                    newPoint["price"] = str(price / 100 + self._sell_price_offset)
+                    data.append(newPoint)
+            self._state_attributes[name] = data

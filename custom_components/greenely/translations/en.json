@@ -35,7 +35,9 @@
                     "prices": "Price sensor",
                     "produced_electricity_days": "Produced electricity days",
                     "time_format": "Time format",
-                    "usage_days": "Usage days"
+                    "usage_days": "Usage days",
+                    "sell_price": "Sell prices sensor",
+                    "sell_price_offset": "Sell price offset in selected currency"
                 },
                 "title": "Manage Sensors"
             }

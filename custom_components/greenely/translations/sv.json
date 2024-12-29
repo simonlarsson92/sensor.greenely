@@ -35,7 +35,9 @@
                     "prices": "Prissensor",
                     "produced_electricity_days": "Producerad el dagar",
                     "time_format": "Tidsformat",
-                    "usage_days": "Förbrukningsdagar"
+                    "usage_days": "Förbrukningsdagar",
+                    "sell_price": "Försäljningsprissensor",
+                    "sell_price_offset": "Försäljningspris justering i vald valuta"
                 },
                 "title": "Hantera sensorer"
             }
